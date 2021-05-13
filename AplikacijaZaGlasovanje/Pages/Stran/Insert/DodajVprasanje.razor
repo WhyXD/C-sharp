@@ -1,0 +1,86 @@
+﻿@page "/Stran/Insert/DodajVprasanje"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using Microsoft.AspNetCore.Identity;
+@using AplikacijaGlasovanje.ModelsUpdate;
+@using AplikacijaGlasovanje.Delo_z_Bazo;
+
+@inject IJSRuntime JsRuntime
+@inject DeloZBazo dzb
+@inject NavigationManager NvgManager
+
+<h3>Dodaj Vprašanje</h3>
+
+<label>Vnesi vprašanje (brez ?). : </label>
+<input type="text" id="txt_box_vprasanje" @bind="stringVprasanje" />
+<br />
+<label>Vnesi pravilen odgovor. : </label>
+<input type="text" id="txt_box_pravilenOdgovor" @bind="stringPravilenOdgovor" />
+<br />
+<label>Vnesi mozen odgovor. : </label>
+<input type="text" id="txt_box_mozenOdgovor" @bind="stringMozenOdgovor"  />
+<br />
+
+
+@foreach (var mo in mozni)
+{
+    <label>Vnesi mozen odgovor. : </label>
+    <input type="text" @bind="stringMozenOdgovor"  />
+    <br />
+}
+<button type="submit" value="Shrani vprasanje" @onclick="@(()=>shraniVprasanje())">Shrani Vprasanje</button> 
+
+<button type="submit" value="Shrani vprasanje" @onclick="@(()=>dodajVrstico())">Dodaj vrstico</button> 
+
+<button type="submit" @onclick="pocisti">Počisti polja</button><br /><br />
+<button type="button" class="btn btn-primary" @onclick="nazajNaglavnoStran">Nazaj na glavno stran</button>
+<p>zadnji index = @zadnjiIndexVprasanja</p>
+@code {
+    private SeznamVprasanj sz;
+    private MozniOdgovori mo;
+    private PravilniOdgovori po;
+    private string stringVprasanje;
+    private string stringPravilenOdgovor;
+    private string stringMozenOdgovor= new String("");
+    private List<String> prejsni;
+    private int zadnjiIndexVprasanja;
+    private int i = 0;
+    private List<MozniOdgovori> mozni = new List<MozniOdgovori>();
+
+
+    public void dodajVrstico()
+    {
+        if (!string.IsNullOrWhiteSpace(stringMozenOdgovor))
+        {
+            dzb.InsertMozenOdgovor(stringMozenOdgovor);
+            mozni.Add(new MozniOdgovori(zadnjiIndexVprasanja, stringMozenOdgovor));
+            stringMozenOdgovor = string.Empty;
+        }
+        else
+        {
+            JsRuntime.InvokeVoidAsync("alert", "Polje ne sme biti prazno");
+        }
+    }
+    public void shraniVprasanje()
+    {
+        dzb.InsertVprasanjeVSeznamVprasanj(stringVprasanje);
+        zadnjiIndexVprasanja = dzb.IndexZadnjegaVprasanjaVSeznamuVprasanj();
+        dzb.InsertPravilniOdgovor(zadnjiIndexVprasanja, stringPravilenOdgovor);
+
+
+        dzb.InsertMozenOdgovor(stringMozenOdgovor);
+        mozni.Add(new MozniOdgovori(zadnjiIndexVprasanja, stringMozenOdgovor));
+        stringMozenOdgovor = string.Empty;
+    }
+    public void nazajNaglavnoStran()
+    {
+        NvgManager.NavigateTo("/Stran/Glasovanje");
+    }
+    public void pocisti()
+    {
+        stringMozenOdgovor = string.Empty;
+        stringPravilenOdgovor = string.Empty;
+        stringVprasanje = string.Empty;
+    }
+    
+}

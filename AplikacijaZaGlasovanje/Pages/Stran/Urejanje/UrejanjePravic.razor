@@ -1,0 +1,92 @@
+﻿@page  "/Stran/Urejanje/PravicUporabnikov"
+@using AplikacijaGlasovanje.ModelsUpdate
+@using AplikacijaGlasovanje.Delo_z_Bazo
+@using System.IO
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@inject DeloZBazo dzb
+@inject NavigationManager nvgm
+@inject IzpisVPdf izp
+@inject IJSRuntime JsRuntime
+
+@if (UserROle.Equals("admin"))
+{
+
+    <h3>UrejanjePravic</h3>
+    <p>Seznam Uporabnikov</p>
+    <table class="table table-bordered table-striped m-0">
+        <thead class="bg-light">
+            <tr>
+                <th>UserId</th>
+                <th>RoleUserja</th>
+                <th>Uredi</th>
+                <th>Shrani Spremembe</th>
+            </tr>
+
+        </thead>
+        <tbody>
+            @foreach (var u in praviceUporabnikov)
+            {
+                <tr>
+                    <td>@u.IdUserjaIzDrugeTabele</td>
+                    <td>@u.RoleUserja</td>
+                    <td>
+                        <select class="custom-select" @onchange="onChange">
+                            <option value="Select" selected disabled="disabled">Izberi pravice</option>
+                            @foreach (var r in Roles)
+                            {
+                                <option value="@r.Id">@r.Name</option>
+                            }
+                        </select>
+                    </td>
+
+                    <td><button class="btn-outline-dark" type="button" @onclick="()=>posodobi(u.IdUserjaIzDrugeTabele,izbranePravice)">Shrani</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+else
+{
+    <p>Nimate pravic za ogled rezultatov </p>
+
+}
+
+
+<button class="btn btn-primary" type="button" @onclick="naGlavnoStran">Nazaj na domačo stran</button>
+
+
+@code {
+
+    private List<AspNetUsers> trenutni;
+    private List<AspNetUsers> seznamUporabnikov;
+    private List<AspNetUserRoles> praviceUporabnikov;
+    private List<AspNetRoles> Roles;
+    private string izbranePravice;
+    private string UserROle;
+
+    protected override async void OnInitialized()
+    {
+        praviceUporabnikov = dzb.GetUsersAndRoles();
+        // seznamUporabnikov = dzb.GetAspNetUsers();
+        trenutni = dzb.GetTrenutnoPrijaavljenega();
+        UserROle = dzb.GetRoleBasedOnIdUserja(trenutni[0].Id);
+        Roles = dzb.GetRoles();
+    }
+    public void naGlavnoStran()
+    {
+        nvgm.NavigateTo("/");
+    }
+    public void onChange(ChangeEventArgs e)
+    {
+        izbranePravice = e.Value.ToString();
+    }
+    public void posodobi(string user, string pravice)
+    {
+        dzb.PosodobiPravice(user, Int32.Parse(pravice));
+        izbranePravice = string.Empty;
+        string s = ""; if (pravice == "1") { s = "admin"; } else { s = "user"; }
+        JsRuntime.InvokeVoidAsync("alert", "Pravice uporabnika " + user + "so bile spremenjena na novo vrednost " + s);
+    }
+}

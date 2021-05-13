@@ -1,0 +1,126 @@
+﻿@page "/Stran/RezultatiGLasovanja"
+
+@using AplikacijaGlasovanje.ModelsUpdate;
+@using AplikacijaGlasovanje.Delo_z_Bazo;
+@using System.IO;
+
+
+@inject DeloZBazo dzb
+@inject NavigationManager nvgm
+@inject IzpisVPdf izp
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@if (UserROle.Equals("admin"))//(jeAdmin())
+{<h3>Rezultati Glasovanja</h3>
+<div class="vrstica">
+
+    @foreach (var o in odgovori)
+    {
+        preveri(o.OddaniOdgo, o.PravilniOdgo, o);
+        <p>Vprašanje : @o.VprasanjeIzSez?</p>
+        <p class="pravilno @(pravilenOdgovor ? "on":"off")">Oddan : @o.OddaniOdgo</p>
+        <p class="pravilno @(skrij ? "ja":"ne")">Pravilni : @o.PravilniOdgo</p>
+        <p>Odgovoril : @o.Odgovoril</p>
+        <p>IdOdgovora : @o.idOdgovora</p>
+        
+        <hr />
+    }
+</div>
+
+<p>Stevilo pravilnih odgovorov : @steviloPravilnih.Count</p>
+<p>Stevilo napacnih odgovorov : @steviloNapacnih.Count</p>
+
+<button class="btn btn-outline-dark" type="button" @onclick="prenesi">Shrani kot PDF</button>
+<button class="btn btn-outline-dark" type="button" @onclick="export">Export</button>
+<br />
+<br />
+
+@*
+    <p>Seznam Pravilno Oddanih Odgovorov</p>
+    @foreach (var pr in seznamPravilnih)
+    {
+        <p>@pr.OddaniOdgo</p>
+        <p>@pr.Odgovoril</p>
+    }
+
+    <p>Seznam Napačno Oddanih Odgovorov</p>
+    @foreach (var na in seznamNapacnih)
+    {
+        <p>@na.OddaniOdgo</p>
+        <p>@na.PravilniOdgo</p>
+        <p>@na.Odgovoril</p>
+    }*@
+}
+else
+{
+<p>Nimate pravic za ogled rezultatov </p>
+
+}
+
+
+<button class="btn btn-primary" type="button" @onclick="naGlavnoStran">Nazaj na domačo stran</button>
+
+@code {
+    private List<OddaniOdgovori> oddani;
+    private List<PravilniOdgovori> pravilni;
+    private List<Odgovori> odgovori;
+    private List<int> steviloPravilnih = new List<int>();
+    private List<int> steviloNapacnih = new List<int>();
+    private List<Odgovori> seznamPravilnih = new List<Odgovori>();
+    private List<Odgovori> seznamNapacnih = new List<Odgovori>();
+    private List<AspNetUsers> trenutni;
+    private bool pravilenOdgovor = false;
+    private bool skrij = false;
+    private int index = 0;
+    private FileStream fa;
+    private string UserROle;
+
+    protected override async void OnInitialized()
+    {
+        trenutni = dzb.GetTrenutnoPrijaavljenega();
+        odgovori = dzb.GetOdgovori();
+        oddani = dzb.GetOddaneOdgovore();
+        pravilni = dzb.GetPravilneOdgovore();
+        UserROle = dzb.GetRoleBasedOnIdUserja(trenutni[0].Id);
+    }
+
+    public void preveri(string oddan, string pravil, Odgovori o)
+    {
+        if (oddan.Equals(pravil))//(oddan.Contains(pravil))
+        {
+            pravilenOdgovor = true;
+            skrij = true;
+            steviloPravilnih.Add(+1);
+            seznamPravilnih.Add(o);
+        }
+        else
+        {
+            pravilenOdgovor = false;
+            skrij = false;
+            steviloNapacnih.Add(+1);
+            seznamNapacnih.Add(o);
+        }
+    }
+    public void naGlavnoStran()
+    {
+        nvgm.NavigateTo("/");
+    }
+    public void prenesi()
+    {
+        //   fa = izp.izpisi();
+        izp.izpisi();
+        /*  System.Diagnostics.Process p = new System.Diagnostics.Process();
+
+          p.StartInfo.FileName= "rezultati";
+          p.StartInfo.Arguments = @"C:\\Users\\Marko\\Desktop\\";
+          p.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Maximized;
+          p.Start();
+          p.WaitForExit();*/
+
+    }
+    public void export()
+    {
+        izp.toPdf();
+    }
+}

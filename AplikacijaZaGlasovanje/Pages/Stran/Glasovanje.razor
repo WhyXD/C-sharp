@@ -1,0 +1,171 @@
+﻿@page "/Stran/Glasovanje"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using Microsoft.AspNetCore.Identity;
+@using AplikacijaGlasovanje.ModelsUpdate;
+@using AplikacijaGlasovanje.Delo_z_Bazo;
+
+@inject DeloZBazo dzb
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject NavigationManager NvgManager
+
+<h3>Glasovanje</h3>
+
+@if (preveriDatum())
+{
+
+    @foreach (var u in trenutni)
+    {
+        <p>trenutno prijavlejni uporabnik: @u.UserName</p>
+    }
+
+    <h1>Vprasanje</h1>
+    var v = dobiVprasanje(id - 1);
+
+    <p>@v.SeznamVprasanjId : @v.VprasanjeIzSeznama?</p>
+    nalozi(v.SeznamVprasanjId);
+    <br />
+    <p>Izbran Odgovor: @selected</p>
+    <div class="form-group">
+        @foreach (var m in monzniOdgovoriNaId)
+        {
+            <input type="radio" name="odg" value="@m.Odgovor" @onchange="onChange" />
+            @m.Odgovor
+            <br />
+        }
+    </div>
+    <br />
+    /*<p>Z DropDownMenujem</p>
+    <div class="form-check-input">
+        <p>Vprasanje : @v.VprasanjeIzSeznama?</p>
+        <select class="form-control" @onchange="onChange">
+            @foreach (var m in monzniOdgovoriNaId)
+            {
+                <option value="@m.Odgovor">@m.Odgovor</option>
+            }
+        </select>
+    </div>
+    <br />
+    <br />
+    <br />
+    <br />*/
+    <input type="button" class="btn btn-primary" value="Prejšnje vprašanje" @onclick="@(() => nazaj())" />
+    <input type="submit" class="btn btn-primary" value="Shrani" @onclick="@(() => shrani(v.SeznamVprasanjId))" />
+    <input type="button" class="btn btn-primary" value="Naslednje vprašanje" @onclick="@(() => naprej())" />
+    <br /><br />
+    @if (UserROle.Equals("admin"))
+    {
+        <input type="button" class="btn-outline-dark" @onclick="@(()=>dodajVprasanje())" value="Dodaj Novo Vprasanje" /><br /><br />
+        <input type="button" class="btn-outline-dark" @onclick="@(()=>dodajNovoGlasovanje())" value="Dodaj Novo Glasovanje" /><br /><br />
+    }
+
+    <br />
+    <br />
+}
+else
+{
+    <p>Za danasnji datum ni zadanih anket</p>
+}
+
+@code {
+    private List<AspNetUsers> seznamUporabnikov;
+    private List<SeznamVprasanj> seznamVprasanj;
+    private List<Odgovori> odgovori;
+    private List<Glasovanja> glasovanja;
+    private List<AspNetUsers> trenutni;
+    private List<MozniOdgovori> monzniOdgovoriNaId;
+    private int id = 1;
+    private string izbran = "Lopar";
+    private DateTime danasnjiDatum = DateTime.Now;
+    private bool chekiran = false;
+    private string selected;
+    private List<AspNetUserRoles> apsur;
+    private string UserROle;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        seznamUporabnikov = dzb.GetAspNetUsers();
+        seznamVprasanj = dzb.GetSeznamVprasanj();
+        odgovori = dzb.GetOdgovori();
+        glasovanja = dzb.GetGlasovanja();
+        trenutni = dzb.GetTrenutnoPrijaavljenega();
+        apsur = dzb.GetUsersAndRoles();
+        UserROle = dzb.GetRoleBasedOnIdUserja(trenutni[0].Id);
+
+    }
+    public void nazaj()
+    {
+        selected = string.Empty;
+        id--;
+    }
+    public void naprej()
+    {
+        selected = string.Empty;
+        id++;
+    }
+    public void shrani(int i)
+    {
+
+        //  OddaniOdgovori oddaniOdgovor = new OddaniOdgovori(i, izbran, trenutni[0].Id);
+        dzb.InsertOddaniOdgovor(i, selected, trenutni[0].Id);
+        selected = string.Empty;
+        dzb.InsertOdgovori(i);
+        naprej();
+    }
+    public void nalozi(int i)
+    {
+
+        monzniOdgovoriNaId = dzb.GetMozneOdgovoreGledeNaIDVprasanjeIzSeznama(i);
+    }
+    public SeznamVprasanj dobiVprasanje(int i)
+    {
+        if (i <= 0 || i >= seznamVprasanj.Count)
+        {
+            if (i < 0)
+            {
+                return seznamVprasanj[seznamVprasanj.Count - 1];
+            }
+            else
+            {
+                return seznamVprasanj[0];
+            }
+
+        }
+        else
+        {
+            return seznamVprasanj[i];
+        }
+    }
+    public void dodajVprasanje()
+    {
+        NvgManager.NavigateTo("/Stran/Insert/DodajVprasanje");
+    }
+    public bool preveriDatum()
+    {
+        bool stanje = false;
+        foreach (var d in glasovanja)
+        {
+            if (danasnjiDatum >= d.GlasovanjeSeZacne && danasnjiDatum <= d.GlasovanjeSeKonca)
+            {
+                stanje = true;
+                return stanje;
+            }
+            else
+            {
+                stanje = false;
+            }
+        }
+        return stanje;
+    }
+    public void onChange(ChangeEventArgs args)
+    {
+        selected = args.Value.ToString();
+    }
+    public void dodajNovoGlasovanje()
+    {
+        NvgManager.NavigateTo("/Stran/Insert/NovoGlasovanje");
+    }
+}

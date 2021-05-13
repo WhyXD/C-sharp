@@ -1,0 +1,56 @@
+﻿@page "/Stran/Insert/NovoGlasovanje"
+@using AplikacijaGlasovanje.ModelsUpdate
+@using AplikacijaGlasovanje.Delo_z_Bazo
+@using System.IO
+
+
+@inject DeloZBazo dzb
+@inject NavigationManager nvgm
+@inject IzpisVPdf izp
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@if (UserROle.Equals("admin"))
+{
+    <h3>NovoGlasovanje</h3>
+    <label>Vnesi ime glasovanja. : </label>
+    <input type="text" id="txt_box_vprasanje" @bind="imeGlasovanja" />
+    <br />
+    <label>Datum začetka glasovanja : </label>
+    <input type="date" id="txt_box_pravilenOdgovor" @bind="seZacne" />
+    <br />
+    <label>Datum konca glasovanja : </label>
+    <input type="date" id="txt_box_mozenOdgovor" @bind="seKonca" />
+    <br />
+    <button class="btn-outline-dark" type="button" @onclick="shrani">Shrani</button><br />
+}
+else
+{
+    <p>Nimate pravic za ogled rezultatov </p>
+
+}
+
+<br />
+<button class="btn btn-primary" type="button" @onclick="naGlavnoStran">Nazaj na domačo stran</button>
+
+
+@code {
+    private List<AspNetUsers> trenutni;
+    private string UserROle;
+    private string imeGlasovanja;
+    private DateTime seZacne=DateTime.Now;
+    private DateTime seKonca = DateTime.Now.AddDays(30);
+
+    protected override async void OnInitialized()
+    {
+        trenutni = dzb.GetTrenutnoPrijaavljenega();
+        UserROle = dzb.GetRoleBasedOnIdUserja(trenutni[0].Id);
+    }
+    public void naGlavnoStran()
+    {
+        nvgm.NavigateTo("/");
+    }
+    public void shrani()
+    {
+        dzb.InserNovoGlasovanje(imeGlasovanja, seZacne, seKonca, trenutni[0].UserName, 1);
+    }
+}
